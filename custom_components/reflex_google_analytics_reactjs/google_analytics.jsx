@@ -98,6 +98,7 @@ const state = {
   disabled: false,
   disabledReason: null,
   testMode: false,
+  includeSearch: true,
   measurementId: null,
   measurementIds: [],
   pending: [],
@@ -138,6 +139,19 @@ const whenReady = (fn) => {
   return true;
 };
 
+/**
+ * `page_location` for a tracked path. Built from the origin plus the path we
+ * already filtered with `includeSearch`/`includeHash`, so query strings (reset
+ * tokens, emails...) never reach Google through the full `location.href`.
+ */
+const pageLocation = (page) =>
+  typeof page === "string" && page.startsWith("/") ? window.location.origin + page : window.location.href;
+
+/** Make later events (not only page views) report the filtered location too. */
+const syncPageLocation = (location) => {
+  if (location !== window.location.href) ReactGA.gtag("set", { page_location: location });
+};
+
 const setOptOutFlags = (value) => {
   state.measurementIds.forEach((id) => {
     window[`ga-disable-${id}`] = value;
@@ -159,12 +173,12 @@ const api = {
   /** Manual page view. Defaults to the current location and document title. */
   pageView: (path, title, extra) =>
     whenReady(() => {
-      const page = path || window.location.pathname + window.location.search;
+      const page = path || window.location.pathname + (state.includeSearch ? window.location.search : "");
       ReactGA.send({
         hitType: "pageview",
         page,
         title: title || document.title,
-        location: window.location.href,
+        location: pageLocation(page),
         ...compact(extra),
       });
       state.lastPage = page;
@@ -256,6 +270,8 @@ const initialize = (props) => {
     testMode = false,
     debugMode = false,
     trackPageViews = true,
+    includeSearch = true,
+    includeHash = false,
     respectDoNotTrack = false,
     gtagUrl,
     nonce,
@@ -281,6 +297,7 @@ const initialize = (props) => {
   if (respectDoNotTrack && doNotTrackEnabled()) return disable("do_not_track");
 
   state.testMode = !!testMode;
+  state.includeSearch = !!includeSearch;
   state.measurementIds = configs.map((config) => config.trackingId);
   state.measurementId = state.measurementIds[0];
 
@@ -301,6 +318,10 @@ const initialize = (props) => {
   if (trackPageViews) options.send_page_view = false;
   if (debugMode) options.debug_mode = true; // GA only checks presence: never send `false`
   if (userId) options.user_id = userId;
+  const initialLocation = pageLocation(
+    window.location.pathname + (includeSearch ? window.location.search : "") + (includeHash ? window.location.hash : ""),
+  );
+  if (initialLocation !== window.location.href && !options.page_location) options.page_location = initialLocation;
 
   ReactGA.initialize(configs, {
     testMode: state.testMode,
@@ -375,7 +396,8 @@ export function ReflexGoogleAnalytics({ children, onReady, onPageView, onCommand
         return;
       }
       state.lastPage = page;
-      const payload = { page_path: page, page_title: document.title, page_location: window.location.href };
+      const payload = { page_path: page, page_title: document.title, page_location: pageLocation(page) };
+      syncPageLocation(payload.page_location);
       ReactGA.send({ hitType: "pageview", page, title: payload.page_title, location: payload.page_location });
       onPageView?.(payload);
     };

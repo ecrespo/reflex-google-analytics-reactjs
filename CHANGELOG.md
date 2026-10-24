@@ -8,7 +8,8 @@ First release.
 - `install(app)` mounts the component once in `app.extra_app_wraps`.
 - `GoogleAnalyticsConfig` and `load_config()`: `google_analytics.toml`, `[tool.reflex-google-analytics]` in
   `pyproject.toml` or JSON, validated, with `GOOGLE_ANALYTICS_*` environment overrides.
-- Automatic page views on React Router navigation, with `exclude_paths`, `include_search` and `include_hash`.
+- Automatic page views on React Router navigation, with `exclude_paths`, `include_search` and `include_hash`;
+  `page_location` honours the same filters, so query strings are never leaked through the full URL.
 - Consent mode v2: defaults, a State-bindable `consent` prop, `grant_consent`, `deny_consent`, `update_consent`.
 - Actions: `event`, `page_view`, `set_params`, `set_user_id`, `set_user_properties`, `opt_out`, `opt_in`,
   `get_client_id`, `get_field`, `get_status`, `gtag`, recommended and ecommerce events with a typed `Item`.

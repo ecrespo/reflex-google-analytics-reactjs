@@ -82,7 +82,7 @@ test_mode = false                    # never load gtag.js, just queue and report
 only_in_production = false           # force test_mode unless `--env prod`
 debug_mode = false                   # show hits in GA4 DebugView
 track_page_views = true
-include_search = true                # "/search?q=x" instead of "/search"
+include_search = true                # "/search?q=x" instead of "/search" (also applies to page_location)
 include_hash = false
 exclude_paths = ["/admin/*", "/preview"]   # "/x" exact, "/x/*" prefix
 respect_do_not_track = false
