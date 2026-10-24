@@ -218,3 +218,14 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Reflex
+.web/
+.states/
+assets/external/
+
+# IDE
+.idea/
+
+# Tooling
+.playwright-cli/

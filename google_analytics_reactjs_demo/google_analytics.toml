@@ -1,0 +1,43 @@
+# Google Analytics configuration for the demo app.
+#
+# Loaded by `rga.install(app)` from the directory where `reflex run` starts.
+# Every field can be overridden with an environment variable named
+# GOOGLE_ANALYTICS_<FIELD>, so the real id never has to be committed:
+#
+#   GOOGLE_ANALYTICS_MEASUREMENT_ID=G-REAL123456 GOOGLE_ANALYTICS_TEST_MODE=false reflex run
+
+# Placeholder id: with test_mode on, react-ga4 never loads gtag.js and nothing
+# leaves the browser. The demo shows every queued gtag command instead.
+measurement_id = "G-XXXXXXXXXX"
+test_mode = true
+
+# Use test mode automatically unless the app runs with `reflex run --env prod`.
+only_in_production = false
+
+# Flag hits for GA4 DebugView.
+debug_mode = true
+
+# Automatic page_view on each client-side navigation.
+track_page_views = true
+include_search = true
+include_hash = false
+exclude_paths = ["/admin/*"]
+
+respect_do_not_track = false
+
+# Consent mode v2: deny everything until the visitor answers the banner.
+[consent]
+ad_storage = "denied"
+ad_user_data = "denied"
+ad_personalization = "denied"
+analytics_storage = "denied"
+functionality_storage = "granted"
+personalization_storage = "denied"
+security_storage = "granted"
+wait_for_update = 500
+
+[gtag_options]
+cookie_flags = "SameSite=Lax;Secure"
+
+[user_properties]
+app_flavor = "reflex-demo"

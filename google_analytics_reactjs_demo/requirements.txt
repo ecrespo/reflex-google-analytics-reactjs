@@ -1,0 +1,2 @@
+reflex>=0.9.11
+reflex-google-analytics-reactjs>=0.1.0
