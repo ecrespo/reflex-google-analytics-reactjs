@@ -99,6 +99,8 @@ const state = {
   disabledReason: null,
   testMode: false,
   includeSearch: true,
+  includeHash: false,
+  locationOverridden: false,
   measurementId: null,
   measurementIds: [],
   pending: [],
@@ -144,12 +146,24 @@ const whenReady = (fn) => {
  * already filtered with `includeSearch`/`includeHash`, so query strings (reset
  * tokens, emails...) never reach Google through the full `location.href`.
  */
-const pageLocation = (page) =>
-  typeof page === "string" && page.startsWith("/") ? window.location.origin + page : window.location.href;
+const pageLocation = (page) => {
+  if (typeof page === "string" && page.startsWith("/")) return window.location.origin + page;
+  // Anything else (relative or absolute URL, no path at all): filter it, never fall back to href.
+  const url = new URL(typeof page === "string" && page ? page : window.location.href, window.location.href);
+  if (!state.includeSearch) url.search = "";
+  if (!state.includeHash) url.hash = "";
+  return url.href;
+};
 
-/** Make later events (not only page views) report the filtered location too. */
+/**
+ * Make later events (not only page views) report the filtered location too.
+ * Once an override exists it is refreshed on every navigation, even when the
+ * new URL needs no filtering, so events never carry a previous page's location.
+ */
 const syncPageLocation = (location) => {
-  if (location !== window.location.href) ReactGA.gtag("set", { page_location: location });
+  if (location === window.location.href && !state.locationOverridden) return;
+  ReactGA.gtag("set", { page_location: location });
+  state.locationOverridden = true;
 };
 
 const setOptOutFlags = (value) => {
@@ -174,11 +188,14 @@ const api = {
   pageView: (path, title, extra) =>
     whenReady(() => {
       const page = path || window.location.pathname + (state.includeSearch ? window.location.search : "");
+      const location = pageLocation(page);
+      // Later events belong to the real route, not to this (possibly virtual) page.
+      syncPageLocation(pageLocation(null));
       ReactGA.send({
         hitType: "pageview",
         page,
         title: title || document.title,
-        location: pageLocation(page),
+        location,
         ...compact(extra),
       });
       state.lastPage = page;
@@ -298,6 +315,7 @@ const initialize = (props) => {
 
   state.testMode = !!testMode;
   state.includeSearch = !!includeSearch;
+  state.includeHash = !!includeHash;
   state.measurementIds = configs.map((config) => config.trackingId);
   state.measurementId = state.measurementIds[0];
 
@@ -318,10 +336,11 @@ const initialize = (props) => {
   if (trackPageViews) options.send_page_view = false;
   if (debugMode) options.debug_mode = true; // GA only checks presence: never send `false`
   if (userId) options.user_id = userId;
-  const initialLocation = pageLocation(
-    window.location.pathname + (includeSearch ? window.location.search : "") + (includeHash ? window.location.hash : ""),
-  );
-  if (initialLocation !== window.location.href && !options.page_location) options.page_location = initialLocation;
+  const initialLocation = pageLocation(null);
+  if (initialLocation !== window.location.href && !options.page_location) {
+    options.page_location = initialLocation;
+    state.locationOverridden = true;
+  }
 
   ReactGA.initialize(configs, {
     testMode: state.testMode,
@@ -379,6 +398,8 @@ export function ReflexGoogleAnalytics({ children, onReady, onPageView, onCommand
     if (!trackPageViews || state.disabled || !state.initialized) return;
     if (page === state.lastPage) return; // StrictMode double effects, same-page rerenders
     if (pathIsExcluded(location.pathname, excludePaths)) {
+      // No page_view here, but events fired on this route still get a filtered location.
+      syncPageLocation(pageLocation(null));
       state.lastPage = page;
       return;
     }
